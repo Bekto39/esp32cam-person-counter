@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Estimate People Density</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0b0f1a; color:#fff; padding:20px; }
+    .wrap { max-width: 900px; margin: 0 auto; display:grid; gap:16px; grid-template-columns: 1fr 320px; }
+    .card { background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:14px; }
+    .title { font-weight:800; margin:0 0 10px 0; }
+    .count { font-size:60px; font-weight:900; margin: 6px 0; }
+    input { width: 90px; padding: 8px 10px; border-radius: 10px; border:1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.35); color:#fff; outline:none; }
+    .status { margin-top:10px; padding:10px; border-radius:12px; font-weight:800; }
+    .ok { background: rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#a7f3d0; }
+    .warn { background: rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); color:#fecaca; }
+    img { width:100%; height:auto; min-height: 240px; border-radius: 12px; border:1px solid rgba(255,255,255,0.12); display:block; background: #000; }
+    .muted { color: rgba(255,255,255,0.65); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="card">
+      <h2 class="title">Live</h2>
+      <img id="stream" src="/video_feed" alt="Kamera bekleniyor..." />
+    </div>
+
+    <div class="card">
+      <h2 class="title">Kişi Sayısı</h2>
+      <div class="muted">Anlık</div>
+      <div class="count" id="count">0</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div class="muted">Limit</div>
+          <input id="limit" type="number" min="1" value="5" />
+        </div>
+      </div>
+      <div id="status" class="status ok">Bağlanıyor...</div>
+    </div>
+  </div>
+
+  <script>
+    const streamImg = document.getElementById('stream');
+
+    streamImg.onerror = function() {
+      console.log("Akış koptu, yeniden deneniyor...");
+      setTimeout(() => {
+        this.src = "/video_feed?t=" + new Date().getTime();
+      }, 2000);
+    };
+
+    async function updateCount() {
+      try {
+        const res = await fetch("/person_count", { cache: "no-store" });
+        const data = await res.json();
+        const count = Number(data.count ?? 0);
+        const limit = Number(document.getElementById("limit").value || 5);
+
+        document.getElementById("count").innerText = count;
+        const status = document.getElementById("status");
+
+        if (count > limit) {
+          status.className = "status warn";
+          status.innerText = ` Limit aşıldı! (Şu an: ${count}, Limit: ${limit})`;
+        } else {
+          status.className = "status ok";
+          status.innerText = ` Normal (Şu an: ${count}, Limit: ${limit})`;
+        }
+      } catch (e) {
+        document.getElementById("status").innerText = " Sunucu bağlantısı yok.";
+      }
+    }
+
+    setInterval(updateCount, 1000);
+    updateCount();
+  </script>
+</body>
+</html>
